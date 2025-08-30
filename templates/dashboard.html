@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}Tax Dashboard - FreelanceTax India{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Header -->
+    <div class="row mb-4">
+        <div class="col">
+            <h1 class="h2 mb-2">
+                <i data-feather="bar-chart-2" class="me-2"></i>
+                Tax Dashboard
+            </h1>
+            <p class="text-muted">
+                Overview of your tax liability and financial position for FY 2024-25
+            </p>
+        </div>
+        <div class="col-auto">
+            <div class="btn-group">
+                <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                    <i data-feather="plus" class="me-2"></i>Add Transaction
+                </a>
+                <a href="{{ url_for('export') }}" class="btn btn-outline-secondary">
+                    <i data-feather="download" class="me-2"></i>Export Data
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Summary Cards -->
+    <div class="row g-4 mb-4">
+        <div class="col-lg-3 col-md-6">
+            <div class="card summary-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-white text-uppercase small fw-bold opacity-75">Total Income</h6>
+                            <h3 class="mb-1 text-white animated-number">₹{{ "{:,.2f}".format(tax_summary.get('total_income', 0)) }}</h3>
+                            <small class="text-white opacity-75">{{ tax_summary.get('income_count', 0) }} transactions</small>
+                        </div>
+                        <div class="feature-icon bg-success" style="width: 50px; height: 50px;">
+                            <i data-feather="trending-up" class="text-white" style="width: 24px; height: 24px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card summary-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-white text-uppercase small fw-bold opacity-75">Expenses</h6>
+                            <h3 class="mb-1 text-white animated-number">₹{{ "{:,.2f}".format(tax_summary.get('total_expenses', 0)) }}</h3>
+                            <small class="text-white opacity-75">{{ tax_summary.get('expense_count', 0) }} transactions</small>
+                        </div>
+                        <div class="feature-icon bg-warning" style="width: 50px; height: 50px;">
+                            <i data-feather="trending-down" class="text-white" style="width: 24px; height: 24px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card summary-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-white text-uppercase small fw-bold opacity-75">Taxable Income</h6>
+                            <h3 class="mb-1 text-white animated-number">₹{{ "{:,.2f}".format(tax_summary.get('taxable_income', 0)) }}</h3>
+                            <small class="text-white opacity-75">
+                                {{ tax_summary.get('calculation_method', 'No data') }}
+                            </small>
+                        </div>
+                        <div class="feature-icon bg-info" style="width: 50px; height: 50px;">
+                            <i data-feather="target" class="text-white" style="width: 24px; height: 24px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3 col-md-6">
+            <div class="card summary-card h-100">
+                <div class="card-body">
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div>
+                            <h6 class="text-white text-uppercase small fw-bold opacity-75">Tax Liability</h6>
+                            <h3 class="mb-1 text-white animated-number">₹{{ "{:,.2f}".format(tax_summary.get('total_tax_liability', 0)) }}</h3>
+                            <small class="text-white opacity-75">
+                                Effective rate: {{ "{:.1f}".format(tax_summary.get('effective_tax_rate', 0)) }}%
+                            </small>
+                        </div>
+                        <div class="feature-icon bg-danger" style="width: 50px; height: 50px;">
+                            <i data-feather="alert-circle" class="text-white" style="width: 24px; height: 24px;"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Left Column -->
+        <div class="col-lg-8">
+            <!-- Advance Tax Schedule -->
+            {% if tax_summary.get('advance_tax_schedule') %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="calendar" class="me-2"></i>
+                        Advance Tax Schedule FY 2024-25
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Due Date</th>
+                                    <th>Description</th>
+                                    <th class="text-end">Installment</th>
+                                    <th class="text-end">Cumulative</th>
+                                    <th class="text-center">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for installment in tax_summary.advance_tax_schedule %}
+                                <tr class="{{ 'table-danger' if installment.is_overdue else '' }}">
+                                    <td>
+                                        <span class="fw-bold">{{ installment.due_date }}</span>
+                                    </td>
+                                    <td>{{ installment.description }}</td>
+                                    <td class="text-end">₹{{ "{:,.2f}".format(installment.installment_amount) }}</td>
+                                    <td class="text-end">₹{{ "{:,.2f}".format(installment.cumulative_amount) }}</td>
+                                    <td class="text-center">
+                                        {% if installment.is_overdue %}
+                                            <span class="badge bg-danger">Overdue</span>
+                                        {% else %}
+                                            <span class="badge bg-success">On Time</span>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Recent Transactions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">
+                        <i data-feather="list" class="me-2"></i>
+                        Recent Transactions
+                    </h5>
+                    <a href="{{ url_for('transactions') }}" class="btn btn-sm btn-outline-primary">
+                        View All
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if recent_transactions %}
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                    <tr>
+                                        <th>Date</th>
+                                        <th>Type</th>
+                                        <th>Description</th>
+                                        <th class="text-end">Amount</th>
+                                        <th>Category</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for transaction in recent_transactions %}
+                                    <tr>
+                                        <td>
+                                            <span class="small">{{ transaction.date }}</span>
+                                        </td>
+                                        <td>
+                                            <span class="badge {{ 'bg-success' if transaction.type == 'income' else 'bg-warning' }}">
+                                                {{ transaction.type.title() }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div>
+                                                <strong>{{ transaction.client_vendor }}</strong>
+                                                <div class="text-muted small">{{ transaction.description[:50] }}{% if transaction.description|length > 50 %}...{% endif %}</div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <span class="fw-bold {{ 'text-success' if transaction.type == 'income' else 'text-warning' }}">
+                                                ₹{{ "{:,.2f}".format(transaction.amount) }}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span class="badge bg-secondary">{{ transaction.category.replace('_', ' ').title() }}</span>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <div class="text-center py-4">
+                            <i data-feather="file-text" class="text-muted mb-3" style="width: 48px; height: 48px;"></i>
+                            <h6 class="text-muted">No transactions yet</h6>
+                            <p class="text-muted">Upload your first invoice or receipt to get started</p>
+                            <a href="{{ url_for('upload_file') }}" class="btn btn-primary">
+                                <i data-feather="upload" class="me-2"></i>Upload Document
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="col-lg-4">
+            <!-- Tax Calculation Method -->
+            {% if tax_summary.get('use_presumptive') %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="info" class="me-2"></i>
+                        Tax Calculation Method
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-3">
+                        <div class="bg-success bg-opacity-10 rounded p-2 me-3">
+                            <i data-feather="check-circle" class="text-success"></i>
+                        </div>
+                        <div>
+                            <strong class="text-success">Section 44ADA</strong>
+                            <div class="text-muted small">Presumptive Taxation</div>
+                        </div>
+                    </div>
+                    <p class="small text-muted">
+                        You're using presumptive taxation with 50% of income treated as expenses.
+                        This saves you ₹{{ "{:,.2f}".format(tax_summary.get('savings_from_presumptive', 0)) }} in taxes.
+                    </p>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- GST Summary -->
+            {% if tax_summary.get('gst_collected', 0) > 0 or tax_summary.get('gst_paid', 0) > 0 %}
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="file-text" class="me-2"></i>
+                        GST Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h5 text-success mb-1">₹{{ "{:,.2f}".format(tax_summary.get('gst_collected', 0)) }}</div>
+                                <div class="small text-muted">GST Collected</div>
+                            </div>
+                        </div>
+                        <div class="col-6">
+                            <div class="text-center">
+                                <div class="h5 text-warning mb-1">₹{{ "{:,.2f}".format(tax_summary.get('gst_paid', 0)) }}</div>
+                                <div class="small text-muted">GST Paid</div>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div class="text-center">
+                        <div class="h5 {{ 'text-danger' if tax_summary.get('gst_liability', 0) > 0 else 'text-success' }} mb-1">
+                            ₹{{ "{:,.2f}".format(tax_summary.get('gst_liability', 0)) }}
+                        </div>
+                        <div class="small text-muted">Net GST Liability</div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Quick Stats -->
+            <div class="card border-0 shadow-sm mb-4">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="trending-up" class="me-2"></i>
+                        Financial Summary
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3 text-center">
+                        <div class="col-6">
+                            <div class="h6 text-info mb-1">₹{{ "{:,.2f}".format(tax_summary.get('net_profit', 0)) }}</div>
+                            <div class="small text-muted">Net Profit</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h6 text-primary mb-1">{{ "{:.1f}".format(tax_summary.get('profit_margin', 0)) }}%</div>
+                            <div class="small text-muted">Profit Margin</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h6 text-success mb-1">₹{{ "{:,.2f}".format(tax_summary.get('current_month_income', 0)) }}</div>
+                            <div class="small text-muted">This Month Income</div>
+                        </div>
+                        <div class="col-6">
+                            <div class="h6 text-warning mb-1">₹{{ "{:,.2f}".format(tax_summary.get('current_month_expenses', 0)) }}</div>
+                            <div class="small text-muted">This Month Expenses</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Actions -->
+            <div class="card border-0 shadow-sm">
+                <div class="card-header">
+                    <h6 class="card-title mb-0">
+                        <i data-feather="zap" class="me-2"></i>
+                        Quick Actions
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{{ url_for('upload_file') }}" class="btn btn-primary btn-sm">
+                            <i data-feather="plus" class="me-2"></i>Add Transaction
+                        </a>
+                        <a href="{{ url_for('transactions') }}" class="btn btn-outline-secondary btn-sm">
+                            <i data-feather="list" class="me-2"></i>View All Transactions
+                        </a>
+                        <a href="{{ url_for('export') }}" class="btn btn-outline-success btn-sm">
+                            <i data-feather="download" class="me-2"></i>Export Tax Data
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// Auto-refresh dashboard data every 30 seconds if there are active processes
+setInterval(function() {
+    // Check if any processing is happening and refresh if needed
+    const hasProcessingMessages = document.querySelector('.alert-info');
+    if (!hasProcessingMessages) {
+        // Optional: Add AJAX refresh of summary data
+    }
+}, 30000);
+</script>
+{% endblock %}
