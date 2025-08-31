@@ -1,3 +1,0 @@
-# This file ensures the uploads directory is tracked by Git
-# The uploads directory is used for temporary storage of uploaded files
-# Files in this directory are processed and then removed
